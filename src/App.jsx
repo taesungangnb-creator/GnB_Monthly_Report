@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend, LabelList
 } from "recharts";
 
 // ---------- 고정 정의 ----------
@@ -67,6 +67,15 @@ function grade10(v) {
   if (v >= 6) return { label: "Not Bad", color: "#ea580c", bg: "#ffedd5" };
   return { label: "Practice More", color: "#e11d48", bg: "#ffe4e6" };
 }
+function gradeBadgeStyle(g) {
+  return {
+    display: "inline-block", width: 96, textAlign: "center",
+    background: g.bg, color: g.color, padding: "4px 0",
+    borderRadius: 999, fontSize: 10.5, fontWeight: 700,
+    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+    boxSizing: "border-box", lineHeight: 1.3,
+  };
+}
 
 // ---------- 메인 앱 ----------
 export default function App() {
@@ -80,9 +89,9 @@ export default function App() {
     phone: "",
     textbook: TEXTBOOKS[0],
   });
-  const [studentCount, setStudentCount] = useState(15);
+  const [studentCount, setStudentCount] = useState(7);
   const [students, setStudents] = useState(
-    Array.from({ length: 15 }, (_, i) => makeStudent(i + 1))
+    Array.from({ length: 7 }, (_, i) => makeStudent(i + 1))
   );
   const [reportIndex, setReportIndex] = useState(0);
 
@@ -92,7 +101,7 @@ export default function App() {
   );
 
   function updateStudentCount(n) {
-    n = Math.max(1, Math.min(30, n));
+    n = Math.max(1, Math.min(20, n));
     setStudentCount(n);
     setStudents((prev) => {
       const arr = [...prev];
@@ -125,7 +134,7 @@ export default function App() {
   }, [students]);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f3f4f6", fontFamily: "'Pretendard','Malgun Gothic',sans-serif" }}>
+    <div className="app-shell" style={{ minHeight: "100vh", background: "#f3f4f6", fontFamily: "'Pretendard','Malgun Gothic',sans-serif" }}>
       <StepIndicator step={step} />
       {step === 1 && (
         <Step1
@@ -373,6 +382,7 @@ function Step2({ form, studentCount, updateStudentCount, students, updateStudent
                         type="number" min={0} max={getRowMax(p.key)}
                         value={s[p.key]}
                         onChange={(e) => updateStudentField(i, p.key, clamp(e.target.value, getRowMax(p.key)))}
+                        onFocus={(e) => e.target.select()}
                         style={cellInput}
                       />
                     </td>
@@ -430,6 +440,7 @@ function SectionRows({ title, defs, students, update, groupLabelStyle, groupMaxS
                 type="number" min={0} max={getRowMax(d.key)}
                 value={s[d.key]}
                 onChange={(e) => update(i, d.key, clamp(e.target.value, getRowMax(d.key)))}
+                onFocus={(e) => e.target.select()}
                 style={cellInput}
               />
             </td>
@@ -466,7 +477,7 @@ function Step3({ form, totalMax, students, classAverages, reportIndex, setReport
   });
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 20px 60px" }}>
+    <div className="step3-wrapper" style={{ maxWidth: 900, margin: "0 auto", padding: "24px 20px 60px" }}>
       <div className="print-hide" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <button onClick={onBack} style={secondaryBtn}>← 입력표 수정</button>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -500,18 +511,11 @@ function Step3({ form, totalMax, students, classAverages, reportIndex, setReport
 
 function ReportCard({ form, totalMax, student, totalGot, totalPct, radarData, classAverages }) {
   return (
-    <div style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.12)" }}>
-      {/* 헤더 배너 */}
-      <div style={{ background: "linear-gradient(90deg,#0369a1,#7e22ce,#db2777)", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ color: "#fff", fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>대한민국 대표 영어교육</span>
-        <span style={{ color: "#fff", fontSize: 12 }}>말하기·쓰기 표현 중심 영어교육</span>
-      </div>
-      <div style={{ padding: "18px 24px 6px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+    <div className="report-card" style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.12)" }}>
+      <div className="report-header" style={{ padding: "20px 24px 6px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
-          <span style={{ fontSize: 30, fontWeight: 900, color: "#1d4ed8" }}>G</span>
-          <span style={{ fontSize: 30, fontWeight: 900, color: "#ea580c" }}>n</span>
-          <span style={{ fontSize: 30, fontWeight: 900, color: "#db2777" }}>B</span>
-          <span style={{ fontSize: 20, fontWeight: 800, color: "#111827", marginLeft: 8 }}>Monthly Report</span>
+          <span style={{ fontSize: 26, fontWeight: 900, color: "#111827" }}>GnB</span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: "#111827", marginLeft: 8 }}>Monthly Report</span>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <SignatureBox label="Director's Signature" />
@@ -521,29 +525,33 @@ function ReportCard({ form, totalMax, student, totalGot, totalPct, radarData, cl
 
       <InfoRow form={form} student={student} />
 
-      <div style={{ margin: "14px 24px 0", background: "#fef9c3", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 16px", fontWeight: 800, color: "#78350f", fontSize: 14 }}>
+      <div className="report-section" style={{ margin: "14px 24px 0", background: "#fef9c3", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 16px", fontWeight: 800, color: "#78350f", fontSize: 14 }}>
         {form.textbook}
       </div>
 
       <ScoreTable totalMax={totalMax} student={student} totalGot={totalGot} totalPct={totalPct} />
 
-      <div style={{ margin: "22px 24px 0" }}>
+      <div className="report-section" style={{ margin: "22px 24px 0" }}>
         <SectionHeader icon="📊" title="Test Result in Graph Form" />
         <div style={{ display: "flex", gap: 14, marginTop: 10, flexWrap: "wrap" }}>
-          <div style={{ flex: "1 1 380px", height: 220, background: "#f9fafb", borderRadius: 10, padding: 8 }}>
+          <div className="chart-box" style={{ flex: "1 1 380px", height: 220, background: "#f9fafb", borderRadius: 10, padding: 8 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={radarData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={radarData} margin={{ top: 18, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="subject" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="득점" fill="#16a34a" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="반평균" fill="#2563eb" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="득점" fill="#16a34a" radius={[3, 3, 0, 0]}>
+                  <LabelList dataKey="득점" position="top" style={{ fontSize: 10, fontWeight: 700, fill: "#166534" }} />
+                </Bar>
+                <Bar dataKey="반평균" fill="#2563eb" radius={[3, 3, 0, 0]}>
+                  <LabelList dataKey="반평균" position="top" style={{ fontSize: 10, fontWeight: 700, fill: "#1e40af" }} />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div style={{ flex: "1 1 260px", height: 220, background: "#f9fafb", borderRadius: 10, padding: 8 }}>
+          <div className="radar-box" style={{ flex: "1 1 260px", height: 220, background: "#f9fafb", borderRadius: 10, padding: 8 }}>
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData} outerRadius="72%">
                 <PolarGrid />
@@ -559,14 +567,14 @@ function ReportCard({ form, totalMax, student, totalGot, totalPct, radarData, cl
         </div>
       </div>
 
-      <div style={{ margin: "22px 24px 0" }}>
+      <div className="report-section" style={{ margin: "22px 24px 0" }}>
         <SectionHeader icon="📋" title="Class Performance" />
         <PerformanceTable student={student} />
       </div>
 
-      <div style={{ margin: "22px 24px 24px" }}>
+      <div className="report-section" style={{ margin: "22px 24px 24px" }}>
         <SectionHeader icon="📝" title="Teacher's Comments" />
-        <div style={{ marginTop: 8, minHeight: 60, border: "1px solid #e5e7eb", borderRadius: 10, padding: "12px 16px", fontSize: 14, color: "#111827", background: "#fafafa" }}>
+        <div className="comments-box" style={{ marginTop: 8, minHeight: 60, border: "1px solid #e5e7eb", borderRadius: 10, padding: "12px 16px", fontSize: 14, color: "#111827", background: "#fafafa" }}>
           {student.comment || <span style={{ color: "#9ca3af" }}>입력된 코멘트가 없습니다.</span>}
         </div>
       </div>
@@ -600,7 +608,7 @@ function ScoreTable({ totalMax, student, totalGot, totalPct }) {
   const th = { padding: "8px 10px", fontSize: 12, color: "#fff", textAlign: "center" };
   const td = { padding: "8px 10px", fontSize: 13, textAlign: "center", borderBottom: "1px solid #f1f5f9" };
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse", margin: "14px 0 0" }}>
+    <table className="score-table" style={{ width: "100%", borderCollapse: "collapse", margin: "14px 0 0" }}>
       <thead>
         <tr style={{ background: "#111827" }}>
           <th style={{ ...th, width: "14%" }}>영역</th>
@@ -623,7 +631,7 @@ function ScoreTable({ totalMax, student, totalGot, totalPct }) {
               <td style={td}>{got} / {max}</td>
               <td style={{ ...td, fontWeight: 700 }}>{pct}</td>
               <td style={td}>
-                <span style={{ background: g.bg, color: g.color, padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{g.label}</span>
+                <span className="grade-badge" style={gradeBadgeStyle(g)}>{g.label}</span>
               </td>
             </tr>
           );
@@ -635,7 +643,7 @@ function ScoreTable({ totalMax, student, totalGot, totalPct }) {
           <td style={td}>
             {(() => {
               const g = grade100(Math.round(totalPct));
-              return <span style={{ background: g.bg, color: g.color, padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{g.label}</span>;
+              return <span className="grade-badge" style={gradeBadgeStyle(g)}>{g.label}</span>;
             })()}
           </td>
         </tr>
@@ -655,7 +663,7 @@ function PerformanceTable({ student }) {
   ];
   const td = { padding: "7px 10px", fontSize: 12, borderBottom: "1px solid #f1f5f9", verticalAlign: "middle" };
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
+    <table className="perf-table" style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
       <thead>
         <tr style={{ background: "#1f2937" }}>
           <th style={{ ...td, color: "#fff", width: "12%" }}>항목</th>
@@ -682,7 +690,7 @@ function PerformanceTable({ student }) {
                   </div>
                 </td>
                 <td style={td}>
-                  <span style={{ background: grd.bg, color: grd.color, padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{grd.label}</span>
+                  <span className="grade-badge" style={gradeBadgeStyle(grd)}>{grd.label}</span>
                 </td>
               </tr>
             );

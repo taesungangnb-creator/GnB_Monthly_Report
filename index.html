@@ -7,8 +7,39 @@
     <style>
       * { box-sizing: border-box; }
       body { margin: 0; }
+
       @media print {
+        @page { size: A4; margin: 8mm; }
+        html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
         .print-hide { display: none !important; }
+
+        #root, .app-shell, .step3-wrapper {
+          max-width: none !important;
+          width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          min-height: 0 !important;
+          background: #fff !important;
+        }
+
+        .report-card {
+          box-shadow: none !important;
+          border-radius: 0 !important;
+          border: 1px solid #e5e7eb !important;
+        }
+        .report-header { padding: 8px 14px 4px !important; }
+        .report-section { margin: 8px 14px 0 !important; }
+        .report-section:last-child { margin-bottom: 8px !important; }
+
+        .score-table td, .score-table th { padding: 3px 6px !important; font-size: 10px !important; }
+        .perf-table td, .perf-table th { padding: 2px 6px !important; font-size: 9.5px !important; }
+        .grade-badge { font-size: 9px !important; width: 78px !important; padding: 2px 0 !important; }
+
+        .chart-box, .radar-box { height: 130px !important; padding: 4px !important; }
+
+        .comments-box { min-height: 32px !important; padding: 6px 10px !important; font-size: 11px !important; }
       }
     </style>
   </head>
