@@ -45,7 +45,7 @@ function clamp(value, max) {
 }
 
 function makeStudent(i) {
-  const base = { id: i, name: String(i), comment: "" };
+  const base = { id: i, name: "", comment: "" };
   PART_DEFS.forEach((p) => (base[p.key] = 0));
   PARTICIPATION_DEFS.forEach((p) => (base[p.key] = 0));
   BEHAVIOR_DEFS.forEach((p) => (base[p.key] = 0));
@@ -53,33 +53,31 @@ function makeStudent(i) {
   return base;
 }
 
-// 엑셀 템플릿/업로드/다운로드에서 공통으로 쓰는 컬럼 정의
-const FIELD_COLUMNS = [
-  { header: "학생명", key: "name", type: "text" },
-  ...PART_DEFS.map((p) => ({ header: `${p.label} (${p.kr})`, key: p.key, type: "number" })),
-  ...PARTICIPATION_DEFS.map((d) => ({ header: `${d.label} (${d.kr})`, key: d.key, type: "number" })),
-  ...BEHAVIOR_DEFS.map((d) => ({ header: `${d.label} (${d.kr})`, key: d.key, type: "number" })),
-  ...HOMEWORK_DEFS.map((d) => ({ header: d.label, key: d.key, type: "number" })),
-  { header: "Teacher Comment", key: "comment", type: "text" },
+// 화면의 입력표와 동일한 행 구성 (라벨 / 만점 / 학생1 / 학생2 ...)
+const ROW_DEFS = [
+  ...PART_DEFS.map((p) => ({ label: `${p.label} (${p.kr})`, key: p.key, max: MAX_SCORES[p.key] })),
+  ...PARTICIPATION_DEFS.map((d) => ({ label: `${d.label} (${d.kr})`, key: d.key, max: DEFAULT_MAX })),
+  ...BEHAVIOR_DEFS.map((d) => ({ label: `${d.label} (${d.kr})`, key: d.key, max: DEFAULT_MAX })),
+  ...HOMEWORK_DEFS.map((d) => ({ label: d.label, key: d.key, max: DEFAULT_MAX })),
 ];
+const SECTION_BREAK_ROWS = ["Participation (참여도)", "Behavior (태도)", "Homework (숙제)"];
+const COMMENT_ROW_LABEL = "Teacher Comments";
 
-function fieldMax(key) {
-  return MAX_SCORES[key] !== undefined ? MAX_SCORES[key] : DEFAULT_MAX;
-}
-
-// 학생 데이터 배열 -> 엑셀 파일로 다운로드 (템플릿 다운로드 / 결과 다운로드 겸용)
+// 학생 데이터 배열 -> 화면 표와 동일한 구조의 엑셀 파일로 다운로드 (템플릿 다운로드 / 결과 다운로드 겸용)
 function exportStudentsToExcel(form, students, filenameSuffix = "") {
-  const headers = FIELD_COLUMNS.map((c) => c.header);
-  const rows = students.map((s, i) => {
-    const row = { 순번: i + 1 };
-    FIELD_COLUMNS.forEach((c) => { row[c.header] = s[c.key] ?? (c.type === "number" ? 0 : ""); });
-    return row;
-  });
-  const ws = XLSX.utils.json_to_sheet(rows, { header: ["순번", ...headers] });
+  const aoa = [];
+  aoa.push(["항목", "만점", ...students.map((s) => s.name || "")]);
+  PART_DEFS.forEach((p) => aoa.push([`${p.label} (${p.kr})`, MAX_SCORES[p.key], ...students.map((s) => s[p.key])]));
+  aoa.push(["Participation (참여도)", "", ...students.map(() => "")]);
+  PARTICIPATION_DEFS.forEach((d) => aoa.push([`${d.label} (${d.kr})`, DEFAULT_MAX, ...students.map((s) => s[d.key])]));
+  aoa.push(["Behavior (태도)", "", ...students.map(() => "")]);
+  BEHAVIOR_DEFS.forEach((d) => aoa.push([`${d.label} (${d.kr})`, DEFAULT_MAX, ...students.map((s) => s[d.key])]));
+  aoa.push(["Homework (숙제)", "", ...students.map(() => "")]);
+  HOMEWORK_DEFS.forEach((d) => aoa.push([d.label, DEFAULT_MAX, ...students.map((s) => s[d.key])]));
+  aoa.push([COMMENT_ROW_LABEL, "", ...students.map((s) => s.comment || "")]);
 
-  const guideRow = { 순번: "만점" };
-  FIELD_COLUMNS.forEach((c) => { guideRow[c.header] = c.type === "number" ? fieldMax(c.key) : ""; });
-  const wsGuide = XLSX.utils.json_to_sheet([guideRow], { header: ["순번", ...headers] });
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"] = [{ wch: 28 }, { wch: 8 }, ...students.map(() => ({ wch: 16 }))];
 
   const infoRows = [
     { 항목: "담임교사", 값: form.teacher },
@@ -93,7 +91,6 @@ function exportStudentsToExcel(form, students, filenameSuffix = "") {
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "성적입력");
-  XLSX.utils.book_append_sheet(wb, wsGuide, "만점안내");
   XLSX.utils.book_append_sheet(wb, wsInfo, "기본정보");
 
   const safeClass = (form.className || "성적표").replace(/[\\/:*?"<>|]/g, "");
@@ -101,7 +98,7 @@ function exportStudentsToExcel(form, students, filenameSuffix = "") {
   XLSX.writeFile(wb, filename);
 }
 
-// 업로드된 엑셀 파일 -> 학생 데이터 배열로 변환
+// 화면 표와 동일한 구조의 엑셀 파일 -> 학생 데이터 배열로 변환
 function parseExcelFile(file, onSuccess, onError) {
   const reader = new FileReader();
   reader.onload = (e) => {
@@ -110,25 +107,36 @@ function parseExcelFile(file, onSuccess, onError) {
       const wb = XLSX.read(data, { type: "array" });
       const sheetName = wb.SheetNames.includes("성적입력") ? "성적입력" : wb.SheetNames[0];
       const ws = wb.Sheets[sheetName];
-      const json = XLSX.utils.sheet_to_json(ws, { defval: "" });
-      if (!json.length) throw new Error("시트에서 데이터를 찾을 수 없습니다.");
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+      if (!aoa.length) throw new Error("시트에서 데이터를 찾을 수 없습니다.");
 
-      const newStudents = json.map((row, i) => {
-        const student = makeStudent(i + 1);
-        FIELD_COLUMNS.forEach((c) => {
-          const val = row[c.header];
-          if (val === undefined || val === "") return;
-          if (c.type === "number") {
-            student[c.key] = clamp(val, fieldMax(c.key));
-          } else if (c.key === "name") {
-            student.name = String(val);
-          } else {
-            student[c.key] = String(val);
-          }
+      const headerRow = aoa[0];
+      const studentCount = Math.max(0, headerRow.length - 2);
+      if (!studentCount) throw new Error("학생 열을 찾을 수 없습니다. 템플릿 형식을 확인해주세요.");
+
+      const names = headerRow.slice(2);
+      const students = names.map((n, i) => makeStudent(i + 1));
+      students.forEach((s, i) => { s.name = String(names[i] ?? "").trim(); });
+
+      const labelMap = {};
+      ROW_DEFS.forEach((r) => { labelMap[r.label] = r; });
+
+      for (let r = 1; r < aoa.length; r++) {
+        const row = aoa[r];
+        const label = String(row[0] ?? "").trim();
+        if (!label || SECTION_BREAK_ROWS.includes(label)) continue;
+        if (label === COMMENT_ROW_LABEL) {
+          students.forEach((s, i) => { s.comment = String(row[2 + i] ?? ""); });
+          continue;
+        }
+        const def = labelMap[label];
+        if (!def) continue;
+        students.forEach((s, i) => {
+          const raw = row[2 + i];
+          s[def.key] = clamp(raw === "" || raw === undefined ? 0 : raw, def.max);
         });
-        return student;
-      });
-      onSuccess(newStudents);
+      }
+      onSuccess(students);
     } catch (err) {
       onError(err);
     }
@@ -384,6 +392,7 @@ const LABEL_W = 176;
 const MAXCOL_W = 60;
 const STUDENT_COL_W = 84;
 const COMMENT_ROW_W = 130;
+const COMMENT_MAX_LEN = 220; // 최종 성적표 인쇄 시 코멘트 칸(고정 높이)에 딱 맞도록 제한
 
 function Step2({ form, studentCount, updateStudentCount, students, updateStudentField, replaceAllStudents, onBack, onNext }) {
   const [uploadError, setUploadError] = useState("");
@@ -490,7 +499,8 @@ function Step2({ form, studentCount, updateStudentCount, students, updateStudent
                     <input
                       value={s.name}
                       onChange={(e) => updateStudentField(i, "name", e.target.value)}
-                      style={{ width: "100%", boxSizing: "border-box", textAlign: "center", padding: "4px 2px", fontSize: 12, border: "1px solid #4b5563", borderRadius: 4, color: "#111827" }}
+                      placeholder={`학생명 입력`}
+                      style={{ width: "100%", boxSizing: "border-box", textAlign: "center", padding: "4px 2px", fontSize: 12, border: "1px solid #4b5563", borderRadius: 4, color: "#111827", background: s.name ? "#fff" : "#f3f4f6" }}
                     />
                   </th>
                 ))}
@@ -526,11 +536,15 @@ function Step2({ form, studentCount, updateStudentCount, students, updateStudent
                   <td key={s.id} style={{ padding: 3, background: i % 2 === 0 ? "#fef9c3" : "#fef3c7", borderRight: i === students.length - 1 ? "none" : "2px solid #fbbf24" }}>
                     <textarea
                       value={s.comment}
-                      onChange={(e) => updateStudentField(i, "comment", e.target.value)}
+                      onChange={(e) => updateStudentField(i, "comment", e.target.value.slice(0, COMMENT_MAX_LEN))}
                       placeholder="코멘트 입력"
                       rows={5}
+                      maxLength={COMMENT_MAX_LEN}
                       style={{ width: COMMENT_ROW_W, maxWidth: COMMENT_ROW_W, boxSizing: "border-box", padding: "6px 6px", fontSize: 11, lineHeight: 1.4, border: "1px solid #fbbf24", borderRadius: 4, background: "#fffbeb", resize: "vertical", fontFamily: "inherit" }}
                     />
+                    <div style={{ width: COMMENT_ROW_W, textAlign: "right", fontSize: 9, color: (s.comment || "").length >= COMMENT_MAX_LEN ? "#dc2626" : "#9ca3af", marginTop: 2 }}>
+                      {(s.comment || "").length} / {COMMENT_MAX_LEN}자
+                    </div>
                   </td>
                 ))}
               </tr>
@@ -632,7 +646,7 @@ function Step3({ form, totalMax, students, classAverages, reportIndex, setReport
             style={{ ...inputStyle, width: "auto" }}
           >
             {students.map((s, i) => (
-              <option key={s.id} value={i}>{i + 1}. {s.name}</option>
+              <option key={s.id} value={i}>{i + 1}. {s.name || "(이름 미입력)"}</option>
             ))}
           </select>
           <button
@@ -688,7 +702,9 @@ function ReportCard({ form, totalMax, student, totalGot, totalPct, radarData, cl
         {form.textbook}
       </div>
 
-      <ScoreTable totalMax={totalMax} student={student} totalGot={totalGot} totalPct={totalPct} />
+      <div className="report-section" style={{ margin: "22px 24px 0" }}>
+        <ScoreTable totalMax={totalMax} student={student} totalGot={totalGot} totalPct={totalPct} />
+      </div>
 
       <div className="report-section" style={{ margin: "22px 24px 0" }}>
         <SectionHeader icon="📊" title="Test Result in Graph Form" />
@@ -758,7 +774,7 @@ function InfoRow({ form, student }) {
       <div style={cell}><span style={label}>Date</span>{form.dateStart} ~ {form.dateEnd}</div>
       <div style={cell}><span style={label}>Teacher's Name</span>{form.teacher}</div>
       <div style={cell}><span style={label}>Class</span>{form.className}</div>
-      <div style={{ ...cell, borderRight: "none" }}><span style={label}>Student's Name</span>{student.name}</div>
+      <div style={{ ...cell, borderRight: "none" }}><span style={label}>Student's Name</span>{student.name || "-"}</div>
     </div>
   );
 }
@@ -767,7 +783,7 @@ function ScoreTable({ totalMax, student, totalGot, totalPct }) {
   const th = { padding: "8px 10px", fontSize: 12, color: "#fff", textAlign: "center" };
   const td = { padding: "8px 10px", fontSize: 13, textAlign: "center", borderBottom: "1px solid #f1f5f9" };
   return (
-    <table className="score-table" style={{ width: "100%", borderCollapse: "collapse", margin: "14px 0 0" }}>
+    <table className="score-table" style={{ width: "100%", borderCollapse: "collapse" }}>
       <thead>
         <tr style={{ background: "#111827" }}>
           <th style={{ ...th, width: "14%" }}>영역</th>

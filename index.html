@@ -28,18 +28,10 @@
           box-shadow: none !important;
           border-radius: 0 !important;
           border: 1px solid #e5e7eb !important;
-          display: flex !important;
-          flex-direction: column !important;
-          min-height: 277mm !important;
         }
         .report-header { padding: 8px 14px 4px !important; }
         .report-section { margin: 8px 14px 0 !important; }
-        .report-section:last-child {
-          margin-bottom: 8px !important;
-          flex: 1 1 auto !important;
-          display: flex !important;
-          flex-direction: column !important;
-        }
+        .report-section:last-child { margin-bottom: 8px !important; }
 
         .score-table td, .score-table th { padding: 3px 6px !important; font-size: 10px !important; }
         .perf-table td, .perf-table th { padding: 2px 6px !important; font-size: 9.5px !important; }
@@ -48,11 +40,13 @@
         .chart-box, .radar-box { height: 130px !important; padding: 4px !important; }
 
         .comments-box {
-          min-height: 32px !important;
+          height: 32mm !important;
+          min-height: 0 !important;
+          max-height: 32mm !important;
           padding: 6px 10px !important;
           font-size: 11px !important;
-          flex: 1 1 auto !important;
-          height: auto !important;
+          line-height: 1.5 !important;
+          overflow: hidden !important;
         }
 
         /* 개별 인쇄: 전체 인쇄 컨테이너 숨김 */
