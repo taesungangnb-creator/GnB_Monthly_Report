@@ -31,6 +31,18 @@ const HOMEWORK_DEFS = [
 
 const TEXTBOOKS = ["(Gplum) Susie's Day 1"];
 
+// 영역별 만점은 교재 기준 고정값입니다. (Part I~V는 시험 만점, 그 외 항목은 10점 만점)
+const MAX_SCORES = { partI: 10, partII: 6, partIII: 6, partIV: 4, partV: 14 };
+const DEFAULT_MAX = 10;
+function getRowMax(key) {
+  return MAX_SCORES[key] !== undefined ? MAX_SCORES[key] : DEFAULT_MAX;
+}
+function clamp(value, max) {
+  const n = Number(value);
+  if (Number.isNaN(n)) return 0;
+  return Math.min(Math.max(n, 0), max);
+}
+
 function makeStudent(i) {
   const base = { id: i, name: String(i), comment: "" };
   PART_DEFS.forEach((p) => (base[p.key] = 0));
@@ -68,9 +80,6 @@ export default function App() {
     phone: "",
     textbook: TEXTBOOKS[0],
   });
-  const [maxScores, setMaxScores] = useState({
-    partI: 10, partII: 6, partIII: 6, partIV: 4, partV: 14,
-  });
   const [studentCount, setStudentCount] = useState(15);
   const [students, setStudents] = useState(
     Array.from({ length: 15 }, (_, i) => makeStudent(i + 1))
@@ -78,8 +87,8 @@ export default function App() {
   const [reportIndex, setReportIndex] = useState(0);
 
   const totalMax = useMemo(
-    () => Object.values(maxScores).reduce((a, b) => a + Number(b || 0), 0),
-    [maxScores]
+    () => Object.values(MAX_SCORES).reduce((a, b) => a + Number(b || 0), 0),
+    []
   );
 
   function updateStudentCount(n) {
@@ -110,10 +119,10 @@ export default function App() {
     PART_DEFS.forEach((p) => {
       const vals = students.map((s) => Number(s[p.key]) || 0);
       const mean = vals.reduce((a, b) => a + b, 0) / (vals.length || 1);
-      avg[p.key] = maxScores[p.key] ? (mean / maxScores[p.key]) * 100 : 0;
+      avg[p.key] = MAX_SCORES[p.key] ? (mean / MAX_SCORES[p.key]) * 100 : 0;
     });
     return avg;
-  }, [students, maxScores]);
+  }, [students]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#f3f4f6", fontFamily: "'Pretendard','Malgun Gothic',sans-serif" }}>
@@ -128,8 +137,6 @@ export default function App() {
       {step === 2 && (
         <Step2
           form={form}
-          maxScores={maxScores}
-          setMaxScores={setMaxScores}
           studentCount={studentCount}
           updateStudentCount={updateStudentCount}
           students={students}
@@ -144,7 +151,6 @@ export default function App() {
       {step === 3 && (
         <Step3
           form={form}
-          maxScores={maxScores}
           totalMax={totalMax}
           students={students}
           classAverages={classAverages}
@@ -273,20 +279,44 @@ const inputStyle = {
 };
 
 // ---------- STEP 2 ----------
-function Step2({ form, maxScores, setMaxScores, studentCount, updateStudentCount, students, updateStudentField, onBack, onNext }) {
+const LABEL_W = 176;
+const MAXCOL_W = 60;
+const STUDENT_COL_W = 84;
+const COMMENT_ROW_W = 130;
+
+function Step2({ form, studentCount, updateStudentCount, students, updateStudentField, onBack, onNext }) {
   const rowLabelStyle = {
     position: "sticky", left: 0, background: "#fecaca", zIndex: 2,
-    padding: "6px 10px", fontSize: 12, fontWeight: 700, color: "#7f1d1d",
-    borderRight: "2px solid #fff", whiteSpace: "nowrap", textAlign: "left",
+    padding: "7px 10px", fontSize: 12, fontWeight: 700, color: "#7f1d1d",
+    borderRight: "2px solid #fff", borderBottom: "1px solid #fca5a5",
+    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textAlign: "left",
   };
-  const groupLabelStyle = { ...rowLabelStyle, background: "#fca5a5" };
+  const maxColStyle = {
+    position: "sticky", left: LABEL_W, background: "#e5e7eb", zIndex: 2,
+    padding: "7px 6px", fontSize: 12, fontWeight: 800, color: "#374151",
+    borderRight: "2px solid #cbd5e1", borderBottom: "1px solid #d1d5db",
+    textAlign: "center",
+  };
+  const groupLabelStyle = { ...rowLabelStyle, background: "#fca5a5", borderBottom: "1px solid #f87171" };
+  const groupMaxStyle = { ...maxColStyle, background: "#f1f5f9", borderBottom: "1px solid #d1d5db" };
+
+  const dataCellStyle = (i, isLast) => ({
+    padding: 3, background: i % 2 === 0 ? "#fef9c3" : "#fef3c7",
+    borderRight: isLast ? "none" : "2px solid #fbbf24",
+    borderBottom: "1px solid #fde68a",
+    textAlign: "center",
+  });
+  const emptyCellStyle = (i, isLast) => ({
+    background: i % 2 === 0 ? "#fee2e2" : "#fecaca",
+    borderRight: isLast ? "none" : "2px solid #fca5a5",
+  });
   const cellInput = {
-    width: 52, textAlign: "center", padding: "5px 2px", fontSize: 12,
-    border: "1px solid #fde68a", borderRadius: 4, background: "#fef9c3",
+    width: "100%", maxWidth: 56, textAlign: "center", padding: "5px 2px", fontSize: 12,
+    border: "1px solid #fbbf24", borderRadius: 4, background: "#fffbeb", boxSizing: "border-box",
   };
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "30px 20px" }}>
+    <div style={{ maxWidth: 1280, margin: "0 auto", padding: "30px 20px" }}>
       <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.1)", overflow: "hidden" }}>
         <div style={{ padding: "20px 26px", borderBottom: "1px solid #f1f5f9" }}>
           <div style={{ fontSize: 22, fontWeight: 800, color: "#111827", marginBottom: 10 }}>학생 성적 입력표</div>
@@ -307,83 +337,64 @@ function Step2({ form, maxScores, setMaxScores, studentCount, updateStudentCount
             <span style={{ minWidth: 24, textAlign: "center", fontWeight: 700 }}>{studentCount}</span>
             <button onClick={() => updateStudentCount(studentCount + 1)} style={stepperBtn}>+</button>
           </div>
-          <span style={{ fontSize: 12, color: "#9ca3af" }}>영역별 문항수(만점)는 아래 표 첫 행에서 직접 수정할 수 있습니다.</span>
+          <span style={{ fontSize: 12, color: "#9ca3af" }}>‘만점’ 열은 교재 기준 고정값이며 수정할 수 없습니다. 입력값은 만점을 초과할 수 없습니다.</span>
         </div>
 
         <div style={{ overflowX: "auto", padding: "18px 26px" }}>
-          <table style={{ borderCollapse: "collapse", fontSize: 12 }}>
+          <table style={{ borderCollapse: "collapse", fontSize: 12, tableLayout: "fixed" }}>
+            <colgroup>
+              <col style={{ width: LABEL_W }} />
+              <col style={{ width: MAXCOL_W }} />
+              {students.map((s) => <col key={s.id} style={{ width: STUDENT_COL_W }} />)}
+            </colgroup>
             <thead>
               <tr>
-                <th style={{ ...rowLabelStyle, background: "#111827", color: "#fff", zIndex: 3 }}>순번</th>
+                <th style={{ ...rowLabelStyle, background: "#111827", color: "#fff", zIndex: 3 }}>학생명</th>
+                <th style={{ ...maxColStyle, background: "#111827", color: "#fff", zIndex: 3 }}>만점</th>
                 {students.map((s, i) => (
-                  <th key={s.id} style={{ padding: "4px 2px", background: "#111827" }}>
+                  <th key={s.id} style={{ padding: "4px 3px", background: "#111827", borderRight: i === students.length - 1 ? "none" : "2px solid #374151" }}>
                     <input
                       value={s.name}
                       onChange={(e) => updateStudentField(i, "name", e.target.value)}
-                      style={{ width: 52, textAlign: "center", padding: "4px 2px", fontSize: 12, border: "1px solid #374151", borderRadius: 4, color: "#111827" }}
+                      style={{ width: "100%", boxSizing: "border-box", textAlign: "center", padding: "4px 2px", fontSize: 12, border: "1px solid #4b5563", borderRadius: 4, color: "#111827" }}
                     />
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {/* 문항수 */}
-              <tr>
-                <td style={groupLabelStyle}>문항수 (만점)</td>
-                {students.map((s) => <td key={s.id} style={{ background: "#fee2e2" }} />)}
-              </tr>
               {PART_DEFS.map((p) => (
                 <tr key={p.key}>
                   <td style={rowLabelStyle}>{p.label} <span style={{ fontWeight: 400 }}>({p.kr})</span></td>
+                  <td style={maxColStyle}>{getRowMax(p.key)}</td>
                   {students.map((s, i) => (
-                    <td key={s.id} style={{ padding: 2, background: "#fef9c3" }}>
+                    <td key={s.id} style={dataCellStyle(i, i === students.length - 1)}>
                       <input
-                        type="number" min={0} max={maxScores[p.key]}
+                        type="number" min={0} max={getRowMax(p.key)}
                         value={s[p.key]}
-                        onChange={(e) => updateStudentField(i, p.key, Number(e.target.value))}
+                        onChange={(e) => updateStudentField(i, p.key, clamp(e.target.value, getRowMax(p.key)))}
                         style={cellInput}
                       />
                     </td>
                   ))}
                 </tr>
               ))}
-              {/* 만점 수정 행 */}
-              <tr>
-                <td style={{ ...rowLabelStyle, background: "#e5e7eb", color: "#111827" }}>└ 만점 설정</td>
-                {students.map((s, i) =>
-                  i === 0 ? (
-                    <td key="max" colSpan={students.length} style={{ padding: "6px 4px", background: "#f9fafb" }}>
-                      <div style={{ display: "flex", gap: 10 }}>
-                        {PART_DEFS.map((p) => (
-                          <label key={p.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", fontSize: 11, color: "#6b7280" }}>
-                            {p.label}
-                            <input
-                              type="number" min={1}
-                              value={maxScores[p.key]}
-                              onChange={(e) => setMaxScores((m) => ({ ...m, [p.key]: Number(e.target.value) }))}
-                              style={{ width: 44, textAlign: "center", padding: 3, border: "1px solid #d1d5db", borderRadius: 4 }}
-                            />
-                          </label>
-                        ))}
-                      </div>
-                    </td>
-                  ) : null
-                )}
-              </tr>
 
-              <SectionRows title="Participation (참여도)" defs={PARTICIPATION_DEFS} students={students} update={updateStudentField} groupLabelStyle={groupLabelStyle} rowLabelStyle={rowLabelStyle} cellInput={cellInput} />
-              <SectionRows title="Behavior (태도)" defs={BEHAVIOR_DEFS} students={students} update={updateStudentField} groupLabelStyle={groupLabelStyle} rowLabelStyle={rowLabelStyle} cellInput={cellInput} />
-              <SectionRows title="Homework (숙제)" defs={HOMEWORK_DEFS} students={students} update={updateStudentField} groupLabelStyle={groupLabelStyle} rowLabelStyle={rowLabelStyle} cellInput={cellInput} />
+              <SectionRows title="Participation (참여도)" defs={PARTICIPATION_DEFS} students={students} update={updateStudentField} groupLabelStyle={groupLabelStyle} groupMaxStyle={groupMaxStyle} rowLabelStyle={rowLabelStyle} maxColStyle={maxColStyle} dataCellStyle={dataCellStyle} emptyCellStyle={emptyCellStyle} cellInput={cellInput} />
+              <SectionRows title="Behavior (태도)" defs={BEHAVIOR_DEFS} students={students} update={updateStudentField} groupLabelStyle={groupLabelStyle} groupMaxStyle={groupMaxStyle} rowLabelStyle={rowLabelStyle} maxColStyle={maxColStyle} dataCellStyle={dataCellStyle} emptyCellStyle={emptyCellStyle} cellInput={cellInput} />
+              <SectionRows title="Homework (숙제)" defs={HOMEWORK_DEFS} students={students} update={updateStudentField} groupLabelStyle={groupLabelStyle} groupMaxStyle={groupMaxStyle} rowLabelStyle={rowLabelStyle} maxColStyle={maxColStyle} dataCellStyle={dataCellStyle} emptyCellStyle={emptyCellStyle} cellInput={cellInput} />
 
               <tr>
                 <td style={{ ...rowLabelStyle, background: "#fca5a5" }}>Teacher Comments</td>
+                <td style={{ ...maxColStyle, background: "#f1f5f9" }}>-</td>
                 {students.map((s, i) => (
-                  <td key={s.id} style={{ padding: 2, background: "#fef9c3" }}>
-                    <input
+                  <td key={s.id} style={{ padding: 3, background: i % 2 === 0 ? "#fef9c3" : "#fef3c7", borderRight: i === students.length - 1 ? "none" : "2px solid #fbbf24" }}>
+                    <textarea
                       value={s.comment}
                       onChange={(e) => updateStudentField(i, "comment", e.target.value)}
-                      placeholder="코멘트"
-                      style={{ width: 90, padding: "5px 4px", fontSize: 11, border: "1px solid #fde68a", borderRadius: 4 }}
+                      placeholder="코멘트 입력"
+                      rows={5}
+                      style={{ width: COMMENT_ROW_W, maxWidth: COMMENT_ROW_W, boxSizing: "border-box", padding: "6px 6px", fontSize: 11, lineHeight: 1.4, border: "1px solid #fbbf24", borderRadius: 4, background: "#fffbeb", resize: "vertical", fontFamily: "inherit" }}
                     />
                   </td>
                 ))}
@@ -401,19 +412,24 @@ function Step2({ form, maxScores, setMaxScores, studentCount, updateStudentCount
   );
 }
 
-function SectionRows({ title, defs, students, update, groupLabelStyle, rowLabelStyle, cellInput }) {
+function SectionRows({ title, defs, students, update, groupLabelStyle, groupMaxStyle, rowLabelStyle, maxColStyle, dataCellStyle, emptyCellStyle, cellInput }) {
   return (
     <>
-      <tr><td style={groupLabelStyle} colSpan={1}>{title}</td>{students.map((s) => <td key={s.id} style={{ background: "#fee2e2" }} />)}</tr>
+      <tr>
+        <td style={groupLabelStyle}>{title}</td>
+        <td style={groupMaxStyle} />
+        {students.map((s, i) => <td key={s.id} style={emptyCellStyle(i, i === students.length - 1)} />)}
+      </tr>
       {defs.map((d) => (
         <tr key={d.key}>
           <td style={rowLabelStyle}>{d.label} {d.kr && <span style={{ fontWeight: 400 }}>({d.kr})</span>}</td>
+          <td style={maxColStyle}>{getRowMax(d.key)}</td>
           {students.map((s, i) => (
-            <td key={s.id} style={{ padding: 2, background: "#fef9c3" }}>
+            <td key={s.id} style={dataCellStyle(i, i === students.length - 1)}>
               <input
-                type="number" min={0} max={10}
+                type="number" min={0} max={getRowMax(d.key)}
                 value={s[d.key]}
-                onChange={(e) => update(i, d.key, Number(e.target.value))}
+                onChange={(e) => update(i, d.key, clamp(e.target.value, getRowMax(d.key)))}
                 style={cellInput}
               />
             </td>
@@ -438,14 +454,14 @@ const secondaryBtn = {
 };
 
 // ---------- STEP 3 ----------
-function Step3({ form, maxScores, totalMax, students, classAverages, reportIndex, setReportIndex, onBack }) {
+function Step3({ form, totalMax, students, classAverages, reportIndex, setReportIndex, onBack }) {
   const student = students[reportIndex];
 
   const totalGot = PART_DEFS.reduce((sum, p) => sum + (Number(student[p.key]) || 0), 0);
   const totalPct = totalMax ? (totalGot / totalMax) * 100 : 0;
 
   const radarData = PART_DEFS.map((p) => {
-    const pct = maxScores[p.key] ? (Number(student[p.key]) / maxScores[p.key]) * 100 : 0;
+    const pct = MAX_SCORES[p.key] ? (Number(student[p.key]) / MAX_SCORES[p.key]) * 100 : 0;
     return { subject: p.label, 득점: Math.round(pct), 반평균: Math.round(classAverages[p.key]), 기준: 80 };
   });
 
@@ -477,12 +493,12 @@ function Step3({ form, maxScores, totalMax, students, classAverages, reportIndex
         <button onClick={() => window.print()} style={primaryBtn}>🖨 인쇄</button>
       </div>
 
-      <ReportCard form={form} maxScores={maxScores} totalMax={totalMax} student={student} totalGot={totalGot} totalPct={totalPct} radarData={radarData} classAverages={classAverages} />
+      <ReportCard form={form} totalMax={totalMax} student={student} totalGot={totalGot} totalPct={totalPct} radarData={radarData} classAverages={classAverages} />
     </div>
   );
 }
 
-function ReportCard({ form, maxScores, totalMax, student, totalGot, totalPct, radarData, classAverages }) {
+function ReportCard({ form, totalMax, student, totalGot, totalPct, radarData, classAverages }) {
   return (
     <div style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.12)" }}>
       {/* 헤더 배너 */}
@@ -509,7 +525,7 @@ function ReportCard({ form, maxScores, totalMax, student, totalGot, totalPct, ra
         {form.textbook}
       </div>
 
-      <ScoreTable maxScores={maxScores} totalMax={totalMax} student={student} totalGot={totalGot} totalPct={totalPct} />
+      <ScoreTable totalMax={totalMax} student={student} totalGot={totalGot} totalPct={totalPct} />
 
       <div style={{ margin: "22px 24px 0" }}>
         <SectionHeader icon="📊" title="Test Result in Graph Form" />
@@ -580,7 +596,7 @@ function InfoRow({ form, student }) {
   );
 }
 
-function ScoreTable({ maxScores, totalMax, student, totalGot, totalPct }) {
+function ScoreTable({ totalMax, student, totalGot, totalPct }) {
   const th = { padding: "8px 10px", fontSize: 12, color: "#fff", textAlign: "center" };
   const td = { padding: "8px 10px", fontSize: 13, textAlign: "center", borderBottom: "1px solid #f1f5f9" };
   return (
@@ -597,7 +613,7 @@ function ScoreTable({ maxScores, totalMax, student, totalGot, totalPct }) {
       <tbody>
         {PART_DEFS.map((p, i) => {
           const got = Number(student[p.key]) || 0;
-          const max = maxScores[p.key] || 1;
+          const max = MAX_SCORES[p.key] || 1;
           const pct = Math.round((got / max) * 100);
           const g = grade100(pct);
           return (
