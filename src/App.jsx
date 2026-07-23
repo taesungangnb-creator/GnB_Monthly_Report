@@ -706,9 +706,9 @@ function ReportCard({ form, totalMax, student, totalGot, totalPct, radarData, cl
         <ScoreTable totalMax={totalMax} student={student} totalGot={totalGot} totalPct={totalPct} />
       </div>
 
-      <div className="report-section" style={{ margin: "22px 24px 0" }}>
+      <div className="report-section chart-section" style={{ margin: "22px 24px 0" }}>
         <SectionHeader icon="📊" title="Test Result in Graph Form" />
-        <div style={{ display: "flex", gap: 14, marginTop: 10, flexWrap: "wrap" }}>
+        <div className="chart-row" style={{ display: "flex", gap: 14, marginTop: 10, flexWrap: "wrap" }}>
           <div className="chart-box" style={{ flex: "1 1 380px", height: 220, background: "#f9fafb", borderRadius: 10, padding: 8 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={radarData} margin={{ top: 18, right: 10, left: -20, bottom: 0 }}>

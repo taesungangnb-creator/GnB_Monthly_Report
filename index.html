@@ -28,16 +28,35 @@
           box-shadow: none !important;
           border-radius: 0 !important;
           border: 1px solid #e5e7eb !important;
+          display: flex !important;
+          flex-direction: column !important;
+          height: 277mm !important;
+          overflow: hidden !important;
         }
-        .report-header { padding: 8px 14px 4px !important; }
-        .report-section { margin: 8px 14px 0 !important; }
+        .report-header { padding: 8px 14px 4px !important; flex: 0 0 auto !important; }
+        .report-section { margin: 8px 14px 0 !important; flex: 0 0 auto !important; }
         .report-section:last-child { margin-bottom: 8px !important; }
 
         .score-table td, .score-table th { padding: 3px 6px !important; font-size: 10px !important; }
         .perf-table td, .perf-table th { padding: 2px 6px !important; font-size: 9.5px !important; }
         .grade-badge { font-size: 9px !important; width: 78px !important; padding: 2px 0 !important; }
 
-        .chart-box, .radar-box { height: 130px !important; padding: 4px !important; }
+        /* 남는 여백을 이 그래프 섹션이 채워서 A4 한 장에 딱 맞춥니다 */
+        .chart-section {
+          flex: 1 1 auto !important;
+          display: flex !important;
+          flex-direction: column !important;
+          min-height: 0 !important;
+        }
+        .chart-row {
+          flex: 1 1 auto !important;
+          min-height: 0 !important;
+        }
+        .chart-box, .radar-box {
+          height: auto !important;
+          flex: 1 1 0 !important;
+          padding: 4px !important;
+        }
 
         .comments-box {
           height: 32mm !important;
